@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ClipCut Editor</title>
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/editor.css" />
+</head>
+<body>
+  <header class="top">
+    <div class="brand"><a href="/" class="plain"><span class="logo">✂</span> ClipCut Studio</a></div>
+    <nav class="steps" aria-label="Workflow">
+      <span class="step">1 Find</span>
+      <span class="step active">2 Make &amp; edit</span>
+      <span class="step muted" title="Coming in a later release">3 Publish</span>
+      <span class="step muted" title="Coming in a later release">4 Learn</span>
+    </nav>
+  </header>
+
+  <main class="editor">
+    <p id="error" class="error" hidden></p>
+
+    <section class="stage">
+      <div class="viewer card">
+        <div class="viewer-head">
+          <strong id="viewer-label">Source preview</strong>
+          <span class="hint" id="save-state"></span>
+        </div>
+        <video id="player" controls playsinline preload="metadata"></video>
+        <div class="row-tools" id="trim-tools" hidden>
+          <button class="ghost" id="set-in">Set start here</button>
+          <button class="ghost" id="set-out">Set end here</button>
+          <span class="hint" id="trim-info"></span>
+        </div>
+        <div class="row-tools">
+          <label>Shape <select id="aspect"><option value="vertical">Vertical 9:16</option><option value="landscape">Landscape 16:9</option></select></label>
+          <button class="ghost" id="preview-btn">Quick preview</button>
+          <button id="export-btn">Export final MP4</button>
+          <span class="hint" id="render-state"></span>
+        </div>
+      </div>
+
+      <aside class="inspector card" id="inspector">
+        <div class="tabs" role="tablist">
+          <button class="tab active" data-tab="item">Selected</button>
+          <button class="tab" data-tab="captions">Captions</button>
+          <button class="tab" data-tab="audio">Audio</button>
+          <button class="tab" data-tab="publish">Title &amp; cover</button>
+        </div>
+        <div class="tab-body" id="tab-item"></div>
+        <div class="tab-body" id="tab-captions" hidden></div>
+        <div class="tab-body" id="tab-audio" hidden></div>
+        <div class="tab-body" id="tab-publish" hidden></div>
+      </aside>
+    </section>
+
+    <section class="card timeline-card">
+      <div class="row-tools">
+        <span class="hint">Playhead <b id="playhead-time">0.0s</b> of <b id="total-time">0s</b></span>
+        <button class="ghost" id="split-btn" title="Split the clip under the playhead">Split</button>
+        <button class="ghost" id="caption-btn">+ Caption at playhead</button>
+        <button class="ghost" id="broll-btn">+ B-roll at playhead</button>
+        <label>Add clip from <select id="add-source"></select></label>
+        <button class="ghost" id="add-clip-btn">+ Clip</button>
+      </div>
+      <div class="timeline" id="timeline">
+        <div class="ruler" id="ruler"></div>
+        <div class="track"><span class="track-label">Video</span><div class="lane" id="lane-video"></div></div>
+        <div class="track"><span class="track-label">B-roll</span><div class="lane" id="lane-broll"></div></div>
+        <div class="track"><span class="track-label">Captions</span><div class="lane" id="lane-captions"></div></div>
+        <div class="track"><span class="track-label">Music</span><div class="lane" id="lane-music"></div></div>
+        <div class="playhead" id="playhead"></div>
+      </div>
+    </section>
+
+    <section class="card" id="exports-card" hidden>
+      <h3>Exports</h3>
+      <div id="exports" class="cuts"></div>
+    </section>
+  </main>
+  <script type="module" src="/editor.js"></script>
+</body>
+</html>

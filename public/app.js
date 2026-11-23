@@ -120,7 +120,7 @@ $("#path-clip").addEventListener("click", async () => {
     state.project = await api("/api/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: state.selected.title, reference: { title: state.selected.title, url: state.selected.url, id: state.selected.id } }),
+      body: JSON.stringify({ name: state.selected.title, reference: { title: state.selected.title, url: state.selected.url, id: state.selected.id, query: state.selected.query } }),
     });
   }
 });
@@ -178,7 +178,7 @@ $("#make-cuts").addEventListener("click", async () => {
         <p class="hint">${esc(c.opening)}</p>
         <p class="hint">${c.media.duration}s · ${c.media.width}×${c.media.height} · ${c.segments.length} shots</p>
         ${c.credits?.length ? `<p class="hint"><b>Credit required in your description:</b><br>${c.credits.map(esc).join("<br>")}</p>` : ""}
-        <a href="/media/${state.project.id}/${c.file}" download>Download MP4</a>
+        <div class="row-tools-inline"><a href="/media/${state.project.id}/${c.file}" download>Download MP4</a> · <a href="/editor.html?project=${state.project.id}&cut=${encodeURIComponent(c.file)}">Open in editor →</a></div>
       </div>`,
       )
       .join("");
