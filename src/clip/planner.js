@@ -2,28 +2,44 @@
 // A plan is a plain list of segments, so the editor in step 2 can load and change it.
 
 const TEASER = 2.5; // seconds
+const MAX_SHOT = 4.5; // seconds per shot in an auto cut
+const SPREAD = 30; // seconds: moments closer than this in one source count as the same scene
 
 /**
  * @param {{sourceId:string, label?:string, moments:object[]}[]} sources in the order the user added them
  * @param {{targetSeconds?:number}} opts
  */
 export function planCuts(sources, { targetSeconds = 30 } = {}) {
-  const pool = sources.flatMap((s, si) => s.moments.map((m) => ({ ...m, sourceId: s.sourceId, sourceIndex: si })));
+  const pool = sources.flatMap((s, si) => s.moments.map((m) => ({ ...m, why: [...(m.why || [])], sourceId: s.sourceId, sourceIndex: si })));
   if (!pool.length) throw Object.assign(new Error("No usable moments found (is every file silent or very short?)"), { status: 422 });
 
-  // Guarantee every source contributes its best moment, so merged footage is really merged.
+  // Short-form pacing: no single shot longer than MAX_SHOT seconds.
+  for (const m of pool) {
+    if (m.duration > MAX_SHOT) {
+      m.end = round(m.start + MAX_SHOT);
+      m.duration = MAX_SHOT;
+    }
+  }
+
+  // Greedy pick with a diversity penalty, so a long video doesn't contribute four
+  // neighbouring chunks from the same scene, and each source gets a fair share.
   const picked = [];
-  for (const s of sources) {
-    const best = pool.filter((m) => m.sourceId === s.sourceId).sort((a, b) => b.score - a.score)[0];
-    if (best) picked.push(best);
-  }
-  const rest = pool.filter((m) => !picked.includes(m)).sort((a, b) => b.score - a.score);
-  let total = sum(picked);
-  for (const m of rest) {
-    if (total >= targetSeconds) break;
-    picked.push(m);
-    total += m.duration;
-  }
+  const crowding = (m) => picked.filter((p) => p.sourceId === m.sourceId && Math.abs(p.start - m.start) < SPREAD).length;
+  const take = (candidates, budget) => {
+    let used = 0;
+    while (used < budget) {
+      const next = candidates
+        .filter((m) => !picked.includes(m))
+        .map((m) => ({ m, s: m.score - 0.2 * crowding(m) }))
+        .sort((a, b) => b.s - a.s)[0]?.m;
+      if (!next) break;
+      picked.push(next);
+      used += next.duration;
+    }
+  };
+  const share = sources.length > 1 ? (targetSeconds * 0.3) / (sources.length - 1 || 1) : 0;
+  for (const s of sources) take(pool.filter((m) => m.sourceId === s.sourceId), Math.min(share, targetSeconds / sources.length) || 0.01);
+  take(pool, targetSeconds - sum(picked));
   // Story order: by source, then by time within the source.
   const body = picked.sort((a, b) => a.sourceIndex - b.sourceIndex || a.start - b.start);
   trimToTarget(body, targetSeconds);
@@ -80,10 +96,10 @@ export function planCuts(sources, { targetSeconds = 30 } = {}) {
 function trimToTarget(body, target) {
   let over = sum(body) - target;
   if (over <= 0) return;
-  // Shave the lowest-scoring segments first, never below 1.2s.
-  for (const m of [...body].sort((a, b) => a.score - b.score)) {
+  // Shave the longest shots first, never below 2s, so no source is squeezed to a flash.
+  for (const m of [...body].sort((a, b) => b.duration - a.duration || a.score - b.score)) {
     if (over <= 0) break;
-    const cut = Math.min(over, m.duration - 1.2);
+    const cut = Math.min(over, m.duration - 2);
     if (cut > 0) {
       m.end = round(m.end - cut);
       m.duration = round(m.end - m.start);

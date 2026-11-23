@@ -239,7 +239,7 @@ export async function createApp({ dataDir = process.env.DATA_DIR || path.join(RO
         createdAt: new Date().toISOString(),
       };
       if (!preview) {
-        await renderCover(out, tl, path.join(dir, "renders", `${base}.jpg`), { scale: renderScale });
+        await renderCover(sourceMap(project), tl, path.join(dir, "renders", `${base}.jpg`), { scale: renderScale });
         if (tl.captions.length) await fs.writeFile(path.join(dir, "renders", `${base}.srt`), info.srt);
         Object.assign(result, {
           cover: `${base}.jpg`,

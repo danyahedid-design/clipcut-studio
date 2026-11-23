@@ -178,12 +178,25 @@ export async function renderTimeline(tl, sources, outFile, { scale = 1, preview 
   return { ...info, expectedDuration: timelineDuration(tl), srt };
 }
 
-/** Cover: a frame of the rendered video with optional headline text. */
-export async function renderCover(videoFile, tl, outFile, { scale = 1 } = {}) {
+/**
+ * Cover: a clean frame from the SOURCE under the cover time (so burned captions don't
+ * collide with the cover headline), framed like the clip, with optional headline text.
+ */
+export async function renderCover(sources, tl, outFile, { scale = 1 } = {}) {
   const [bw, bh] = SIZES[tl.aspect];
   const W = even(bw * scale);
   const H = even(bh * scale);
-  const filters = [`scale=${W}:${H}`];
+  const starts = clipStartsLocal(tl);
+  const t = Math.max(0, tl.meta.coverTime || 0);
+  let i = starts.findLastIndex((s) => s <= t);
+  if (i < 0) i = 0;
+  const c = tl.clips[i];
+  const srcT = Math.min(c.out - 0.05, c.in + (t - starts[i]) * c.speed);
+  const zoom = c.zoom > 1.001 ? `crop=iw/${c.zoom}:ih/${c.zoom}:(iw-iw/${c.zoom})*${c.focusX}:(ih-ih/${c.zoom})*${c.focusY},` : "";
+  const fx = EFFECT_FILTERS[c.effect] ? `,${EFFECT_FILTERS[c.effect]}` : "";
+  const filters = [
+    `${zoom}scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},setsar=1,eq=brightness=${c.color.brightness}:contrast=${c.color.contrast}:saturation=${c.color.saturation}${fx}`,
+  ];
   if (tl.meta.coverText) {
     const font = captionFont();
     const size = Math.round(H * (tl.aspect === "vertical" ? 0.06 : 0.09));
@@ -193,8 +206,19 @@ export async function renderCover(videoFile, tl, outFile, { scale = 1 } = {}) {
       `drawtext=fontfile='${esc(font)}':textfile='${esc(tf)}':fontsize=${size}:fontcolor=white:borderw=${Math.round(size * 0.09)}:bordercolor=black:line_spacing=${Math.round(size * 0.15)}:x=(w-text_w)/2:y=h*0.14`,
     );
   }
-  await ffmpeg(["-y", "-ss", f3(tl.meta.coverTime || 0), "-i", videoFile, "-frames:v", "1", "-vf", filters.join(","), "-q:v", "2", outFile]);
+  await ffmpeg(["-y", "-ss", f3(srcT), "-i", sources[c.sourceId].file, "-frames:v", "1", "-vf", filters.join(","), "-q:v", "2", outFile]);
+  await fs.rm(`${outFile}.txt`, { force: true });
   return outFile;
+}
+
+function clipStartsLocal(tl) {
+  let t = 0;
+  return tl.clips.map((c, i) => {
+    t -= transitionLength(tl.clips, i);
+    const s = t;
+    t += clipDuration(c);
+    return s;
+  });
 }
 
 export function toSrt(captions) {

@@ -2,10 +2,10 @@
 
 Find what's breaking out in any niche, then make it your own: clip footage you have the rights to, or get an original-version brief for footage you don't. Later releases add publishing and learning from real results.
 
-This is **step 1, the working prototype** of a four-step plan:
+This covers **steps 1 and 2** of a four-step plan:
 
 1. **Prototype of the loop** (this release): search, rank, choose a video, rights record, three cuts as MP4, original-version brief
-2. Editor and exports: timeline, captions, music, effects, title, description, cover
+2. **Editor and exports** (this release): timeline, captions, music, effects, title, description, cover
 3. Publish and learn: YouTube connection, uploads, analytics, 8M views goal
 4. Billing: owner access, paid plans, cost tracking
 
@@ -36,10 +36,23 @@ Without `YOUTUBE_API_KEY` the search runs on **synthetic sample data**, and the 
 | Make | Three cuts with different openings (strongest first, cold-open teaser, other-source opener), merged from several files | Works |
 | Make | Vertical 1080×1920 and landscape 1920×1080 MP4 (H.264/AAC, faststart) plus a JPG cover | Works |
 | Make | "Create an original version": format, three hooks, title ideas, beats, shot list, rights guardrails | Works, as a **template draft** (no AI model yet) |
-| Edit / Publish / Learn / Billing | | Planned for steps 2 to 4 |
+| Edit | Timeline editor (`/editor.html`): trim with "set start/end here", split at playhead, reorder, duplicate, delete, speed 0.5x to 2x | Works |
+| Edit | Zoom and reframe, brightness/contrast/saturation, 7 looks, 5 transitions (crossfade, dip to black, slide, zoom, wipe) | Works |
+| Edit | B-roll overlays, music with automatic ducking under speech, noise clean-up, loudness to -14 LUFS | Works |
+| Edit | Captions: typed or SRT import, burned in with position/size/colour/box, exported as .srt | Works. Automatic speech-to-text needs a transcription service (not connected) |
+| Edit | Title, description and cover with headline for each version; CC credits always kept in the description | Works. Template suggestions, fully editable |
+| Edit | Quick low-res preview and full 1080×1920 or 1920×1080 export | Works |
+| Publish / Learn / Billing | | Planned for steps 3 and 4 |
 | Find | Clipping campaigns (creators who pay or allow clippers) | Planned. Needs an authorized campaign source |
 
-### Proof with real footage
+### Proof with real vlog footage (step 2)
+
+A 28-second creator-style clip was cut and edited from two real travel vlogs on Wikimedia Commons, both CC BY 3.0:
+*"I Survived Pakistan's TERRIFYING Hunza Bridge!"* by Peace Travels and *"Japan's Overnight Sleeper Train CHEAPEST Seat"* by Dipesh vlog
+(480p transcodes, the largest Commons serves for these files). The auto-cut picked seven shots spread across both ten-minute videos; the editor then reordered them
+to open on the bridge, added zoom, looks, crossfades and a dip to black, five captions, a cover headline, and exported vertical and landscape MP4s with an SRT and both credit lines.
+
+### Proof with real footage (step 1)
 
 A real clip was made through the web UI from two Creative Commons films by the Blender Foundation:
 *Big Buck Bunny* (© 2008 Blender Foundation, CC BY 3.0) and *Elephants Dream* (© 2006 Blender Foundation / Netherlands Media Art Institute, CC BY 2.5),
@@ -65,7 +78,8 @@ src/discovery/              YouTube Data API provider, sample provider, ranking
 src/rights.js               Rights record validation
 src/original.js             Original-version brief
 src/clip/                   ffmpeg analysis, cut planner, renderer
-public/                     Single-page UI
+src/edit/                   timeline model, editor renderer, title/description suggestions
+public/                     Find/make page (index.html) and editor (editor.html)
 scripts/demo.js             CLI proof of the workflow
 scripts/make-test-media.js  Generates two synthetic test videos we own outright
 test/                       node:test suites

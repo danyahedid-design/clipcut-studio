@@ -43,3 +43,5 @@ button.danger { background: none; border-color: #5a2a30; color: #ff8d98; font-we
   .stage { grid-template-columns: 1fr; }
   .inspector { max-height: none; }
 }
+.field input, .field select { min-width: 0; width: 100%; box-sizing: border-box; }
+.inspector { overflow-x: hidden; }
