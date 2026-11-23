@@ -20,6 +20,8 @@ export async function discover(provider, opts) {
   const results = rankVideos(filtered, baselines, { mode, now }).map((v) => ({
     ...v,
     format: isShort(v.durationSeconds) ? "short" : "long",
+    reusable: v.license === "creativeCommon",
+    reasons: v.license === "creativeCommon" ? [...v.reasons, "Creative Commons (CC BY): can be reused with credit"] : v.reasons,
   }));
   return {
     query: opts.q,

@@ -25,6 +25,12 @@ test("format filter and mode switch work", async () => {
   assert.deepEqual(vs, [...vs].sort((x, y) => y - x));
 });
 
+test("Creative Commons filter only returns reusable videos", async () => {
+  const r = await discover(new SampleProvider(), { q: "travel", license: "creativeCommon", now });
+  assert.ok(r.results.length > 0);
+  assert.ok(r.results.every((v) => v.reusable && v.reasons.some((x) => /Creative Commons/.test(x))));
+});
+
 test("YouTube provider calls the official endpoints and builds baselines", async () => {
   const calls = [];
   const fake = async (url) => {
@@ -40,7 +46,7 @@ test("YouTube provider calls the official endpoints and builds baselines", async
     }[ep];
     return { ok: true, json: async () => json };
   };
-  const r = await discover(new YouTubeProvider("KEY", fake), { q: "travel", period: "7d", lang: "en", region: "GB", now });
+  const r = await discover(new YouTubeProvider("KEY", fake), { q: "travel", period: "7d", lang: "en", region: "GB", license: "creativeCommon", now });
   assert.equal(r.sampleData, false);
   const top = r.results[0];
   assert.equal(top.url, "https://www.youtube.com/watch?v=v1");
@@ -51,5 +57,6 @@ test("YouTube provider calls the official endpoints and builds baselines", async
   assert.match(search, /regionCode=GB/);
   assert.match(search, /relevanceLanguage=en/);
   assert.match(search, /publishedAfter=/);
+  assert.match(search, /videoLicense=creativeCommon/);
   assert.ok(!calls.find((c) => c.startsWith("videos?part=statistics")).includes("v1"), "baseline excludes the result itself");
 });

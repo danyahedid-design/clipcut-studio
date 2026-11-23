@@ -35,6 +35,7 @@ async function search() {
     format: $("#format").value,
     lang: $("#lang").value,
     region: $("#region").value.toUpperCase(),
+    license: $("#license").value,
   });
   $("#results").innerHTML = `<p class="hint">Searching…</p>`;
   try {
@@ -67,7 +68,7 @@ function renderResults(data) {
       <div class="rank">${v.rank}</div>
       <div>
         <h3>${esc(v.title)}</h3>
-        <div class="meta">${esc(v.channelTitle)} · ${new Date(v.publishedAt).toLocaleDateString()} · ${dur(v.durationSeconds)} · <span class="tag">${v.format === "short" ? "Short (by length)" : "Long form"}</span></div>
+        <div class="meta">${esc(v.channelTitle)} · ${new Date(v.publishedAt).toLocaleDateString()} · ${dur(v.durationSeconds)} · <span class="tag">${v.format === "short" ? "Short (by length)" : "Long form"}</span>${v.reusable ? ` <span class="tag cc">CC BY · reusable with credit</span>` : ""}</div>
         <div class="metrics">
           ${metric("Views", v.metrics.views)}
           ${metric("Views/hour", v.metrics.viewsPerHour)}
@@ -176,6 +177,7 @@ $("#make-cuts").addEventListener("click", async () => {
         <video controls preload="metadata" poster="/media/${state.project.id}/${c.cover}" src="/media/${state.project.id}/${c.file}"></video>
         <p class="hint">${esc(c.opening)}</p>
         <p class="hint">${c.media.duration}s · ${c.media.width}×${c.media.height} · ${c.segments.length} shots</p>
+        ${c.credits?.length ? `<p class="hint"><b>Credit required in your description:</b><br>${c.credits.map(esc).join("<br>")}</p>` : ""}
         <a href="/media/${state.project.id}/${c.file}" download>Download MP4</a>
       </div>`,
       )

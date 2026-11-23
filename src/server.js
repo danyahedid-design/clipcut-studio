@@ -6,7 +6,7 @@ import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { Store } from "./store.js";
 import { createProvider, discover } from "./discovery/index.js";
-import { RIGHTS_BASES, validateRights, buildRightsRecord, sha256File, assertSourcesCleared } from "./rights.js";
+import { RIGHTS_BASES, validateRights, buildRightsRecord, sha256File, assertSourcesCleared, creditsFor } from "./rights.js";
 import { createOriginalBrief } from "./original.js";
 import { makeCuts } from "./clip/index.js";
 import { probe } from "./clip/ffmpeg.js";
@@ -44,9 +44,9 @@ export async function createApp({ dataDir = process.env.DATA_DIR || path.join(RO
   app.get(
     "/api/search",
     wrap(async (req, res) => {
-      const { q, mode, lang, region, period, format } = req.query;
+      const { q, mode, lang, region, period, format, license } = req.query;
       if (!q?.trim()) return res.status(400).json({ error: "Enter a topic, creator or channel" });
-      res.json(await discover(provider, { q: q.trim().slice(0, 200), mode, lang, region, period, format }));
+      res.json(await discover(provider, { q: q.trim().slice(0, 200), mode, lang, region, period, format, license }));
     }),
   );
 
@@ -122,6 +122,8 @@ export async function createApp({ dataDir = process.env.DATA_DIR || path.join(RO
         aspect: req.body.aspect || "vertical",
         scale: renderScale,
       });
+      const credits = creditsFor(project, ids);
+      for (const c of result.cuts) c.credits = credits;
       project.cuts.push(...result.cuts);
       project.lastAnalysis = result.analysis;
       await store.save(project);
@@ -152,13 +154,15 @@ export const FEATURES = [
   { area: "Find", feature: "Niche / creator / @channel search", status: "works", note: "Live with a YouTube API key; labelled sample data without one" },
   { area: "Find", feature: "Breaking out now vs Most viewed", status: "works" },
   { area: "Find", feature: "Outlier vs channel baseline, views/hour, engagement", status: "works", note: "Each number labelled reported, calculated or estimated" },
-  { area: "Make", feature: "Rights record per source file", status: "works", note: "Clipping is blocked without one" },
+  { area: "Find", feature: "Creative Commons filter (reusable with credit)", status: "works", note: "Uses YouTube's own licence field" },
+  { area: "Make", feature: "Rights record per source file, with credit lines for CC footage", status: "works", note: "Clipping is blocked without one" },
   { area: "Make", feature: "Create an original version (hook, beats, shot list)", status: "works", note: "Template draft, not AI-written yet" },
   { area: "Make", feature: "Dead-air removal, strong moments, 3 openings, MP4 + cover", status: "works" },
   { area: "Make", feature: "Merge footage from several files", status: "works" },
   { area: "Edit", feature: "Timeline editor, captions, music, effects", status: "planned", note: "Step 2" },
   { area: "Publish", feature: "YouTube upload and scheduling", status: "planned", note: "Step 3, needs Google OAuth" },
   { area: "Learn", feature: "Analytics and 8M views goal", status: "planned", note: "Step 3" },
+  { area: "Find", feature: "Clipping campaigns (creators who pay or allow clippers)", status: "planned", note: "Needs an authorized campaign source" },
   { area: "Billing", feature: "Owner access, paid plans, cost tracking", status: "planned", note: "Step 4" },
 ];
 

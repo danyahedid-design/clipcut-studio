@@ -38,7 +38,7 @@ export class SampleProvider {
     this.source = "sample";
   }
 
-  async search({ q, period = "30d", format = "any", lang, region, now = new Date() }) {
+  async search({ q, period = "30d", format = "any", license = "any", lang, region, now = new Date() }) {
     const query = (q || "").trim() || "trending";
     const r = rng(`${query.toLowerCase()}|${lang || ""}|${region || ""}`);
     const channels = ["A", "B", "C", "D", "E"].map((letter, i) => ({
@@ -70,9 +70,11 @@ export class SampleProvider {
         views,
         likes: hideLikes ? null : Math.round(views * (0.01 + r() * 0.06)),
         comments: Math.round(views * (0.0005 + r() * 0.004)),
+        license: i % 4 === 2 ? "creativeCommon" : "youtube",
         source: "sample",
       };
     }).filter((v) => {
+      if (license === "creativeCommon" && v.license !== "creativeCommon") return false;
       if (format === "short") return v.durationSeconds <= 180;
       if (format === "long") return v.durationSeconds > 180;
       return true;

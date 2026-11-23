@@ -34,6 +34,9 @@
         <label>Format
           <select id="format"><option value="any">Any</option><option value="short">Shorts (≤3 min)</option><option value="long">Long form</option></select>
         </label>
+        <label>Licence
+          <select id="license"><option value="any">Any</option><option value="creativeCommon">Creative Commons only (reusable)</option></select>
+        </label>
         <label>Language <input id="lang" size="4" placeholder="en" maxlength="5" /></label>
         <label>Region <input id="region" size="4" placeholder="US" maxlength="2" /></label>
       </div>
@@ -64,6 +67,7 @@
           </label>
           <label>Rights holder <input name="holder" required placeholder="Your name or company" /></label>
           <label>Evidence <input name="evidence" placeholder="Licence link or permission reference (needed unless you own it)" /></label>
+          <label>Credit line <input name="attribution" placeholder="Required for Creative Commons, e.g. © 2008 Blender Foundation, CC BY 3.0" /></label>
           <label class="check"><input type="checkbox" name="confirmed" value="true" required /> I confirm the statement above is true for this file.</label>
           <button type="submit">Add source</button>
           <p class="hint">Each file gets a rights record tied to its exact contents (SHA-256). Clips can't be made from files without one.</p>

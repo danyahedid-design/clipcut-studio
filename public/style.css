@@ -17,6 +17,7 @@ main { max-width: 1100px; margin: 0 auto; padding: 16px; }
 .top { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 14px 20px; border-bottom: 1px solid var(--line); background: var(--panel); position: sticky; top: 0; z-index: 2; }
 .brand { font-weight: 700; font-size: 18px; }
 .logo { color: var(--accent); }
+a { color: var(--accent); }
 .steps { display: flex; gap: 6px; flex-wrap: wrap; }
 .step { padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); font-size: 13px; color: var(--muted); }
 .step.active { border-color: var(--accent); color: var(--text); }
@@ -49,6 +50,7 @@ button.link { background: none; border: none; color: var(--muted); padding: 0; m
 .reasons { margin: 0; padding-left: 18px; font-size: 13px; color: var(--muted); }
 .result .actions { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
 .tag { font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+.tag.cc { border-color: var(--good); color: var(--good); }
 .paths { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0; }
 .path { text-align: left; background: var(--card); border: 1px solid var(--line); color: var(--text); padding: 16px; font-weight: 400; display: flex; flex-direction: column; gap: 6px; }
 .path.selected { border-color: var(--accent); }

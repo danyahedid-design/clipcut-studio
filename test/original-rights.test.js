@@ -24,5 +24,7 @@ test("rights validation", () => {
   assert.ok(validateRights({ basis: "licensed", holder: "Me", confirmed: true }).some((e) => /evidence/.test(e)));
   assert.ok(validateRights({ basis: "own", holder: "Me" }).some((e) => /confirm/.test(e)));
   assert.ok(validateRights({ basis: "found-it-online", holder: "Me", confirmed: true }).length);
+  assert.ok(validateRights({ basis: "cc_by", holder: "Blender Foundation", evidence: "https://creativecommons.org/licenses/by/3.0/", confirmed: true }).some((e) => /attribution/.test(e)));
+  assert.deepEqual(validateRights({ basis: "cc_by", holder: "Blender Foundation", evidence: "https://creativecommons.org/licenses/by/3.0/", attribution: "(c) 2008 Blender Foundation", confirmed: true }), []);
   assert.throws(() => assertSourcesCleared({ rights: [{ sourceId: "a" }] }, ["a", "b"]), /b/);
 });

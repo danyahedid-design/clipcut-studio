@@ -33,7 +33,7 @@ export class YouTubeProvider {
   }
 
   /** @returns {Promise<{videos: object[], baselines: Record<string, {medianViews:number, sampleSize:number}>}>} */
-  async search({ q, mode = "breakout", lang, region, period = "30d", format = "any", now = new Date() }) {
+  async search({ q, mode = "breakout", lang, region, period = "30d", format = "any", license = "any", now = new Date() }) {
     const params = {
       part: "snippet",
       type: "video",
@@ -46,6 +46,7 @@ export class YouTubeProvider {
     if (PERIODS[period]) {
       params.publishedAfter = new Date(now - PERIODS[period] * 86400e3).toISOString();
     }
+    if (license === "creativeCommon") params.videoLicense = "creativeCommon";
     if (format === "short") params.videoDuration = "short"; // < 4 min, refined below
     if (format === "long") params.videoDuration = "medium"; // 4-20 min; "any" covers the rest
 
@@ -67,7 +68,7 @@ export class YouTubeProvider {
 
   async videoDetails(ids) {
     if (!ids.length) return [];
-    const res = await this.get("videos", { part: "snippet,statistics,contentDetails", id: ids.join(",") });
+    const res = await this.get("videos", { part: "snippet,statistics,contentDetails,status", id: ids.join(",") });
     return (res.items || []).map(normaliseVideo);
   }
 
@@ -118,6 +119,7 @@ export function normaliseVideo(item) {
     views: num(s.viewCount),
     likes: num(s.likeCount), // null when the creator hides likes
     comments: num(s.commentCount),
+    license: item.status?.license || null, // "youtube" (standard) or "creativeCommon" (CC BY)
     source: "youtube",
   };
 }

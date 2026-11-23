@@ -29,13 +29,22 @@ Without `YOUTUBE_API_KEY` the search runs on **synthetic sample data**, and the 
 |---|---|---|
 | Find | Search by niche, creator or `@handle`; filter by language, region, period and Shorts/long form | Works. Live with an API key |
 | Find | "Breaking out now" vs "Most viewed" | Works |
+| Find | Creative Commons filter: only videos the creator licensed CC BY on YouTube (reusable with credit) | Works. Get the file from the creator or an authorized download, not by ripping YouTube |
 | Find | Views per hour/day, engagement, **outlier score vs the channel's own median** of recent uploads, and a "why it ranked" list | Works. Every number is labelled *reported*, *calculated* or *estimated* |
-| Make | Rights record per source file (basis, holder, evidence, SHA-256 of the file, timestamp) | Works. Clipping is refused without one |
+| Make | Rights record per source file (basis, holder, evidence, credit line, SHA-256 of the file, timestamp) | Works. Clipping is refused without one. CC BY sources must include a credit line, which is attached to every cut |
 | Make | Analysis: dead-air removal (silence detection), loudness, scene changes, scored moments | Works |
 | Make | Three cuts with different openings (strongest first, cold-open teaser, other-source opener), merged from several files | Works |
 | Make | Vertical 1080×1920 and landscape 1920×1080 MP4 (H.264/AAC, faststart) plus a JPG cover | Works |
 | Make | "Create an original version": format, three hooks, title ideas, beats, shot list, rights guardrails | Works, as a **template draft** (no AI model yet) |
 | Edit / Publish / Learn / Billing | | Planned for steps 2 to 4 |
+| Find | Clipping campaigns (creators who pay or allow clippers) | Planned. Needs an authorized campaign source |
+
+### Proof with real footage
+
+A real clip was made through the web UI from two Creative Commons films by the Blender Foundation:
+*Big Buck Bunny* (© 2008 Blender Foundation, CC BY 3.0) and *Elephants Dream* (© 2006 Blender Foundation / Netherlands Media Art Institute, CC BY 2.5),
+taken from the public sample-media repositories `mediaelement/mediaelement-files` and `Matroska-Org/matroska-test-files`.
+Result: 22.1s of dead air removed, three 30s 1080×1920 H.264/AAC cuts mixing both films, each carrying both credit lines.
 
 ## How ranking works
 
