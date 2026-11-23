@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ClipCut Studio</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header class="top">
+    <div class="brand"><span class="logo">✂</span> ClipCut Studio</div>
+    <nav class="steps" aria-label="Workflow">
+      <span class="step active" data-step="find">1 Find</span>
+      <span class="step" data-step="make">2 Make</span>
+      <span class="step muted" title="Coming in a later release">3 Publish</span>
+      <span class="step muted" title="Coming in a later release">4 Learn</span>
+    </nav>
+  </header>
+
+  <main>
+    <section id="find" class="panel">
+      <form id="search-form" class="search">
+        <input id="q" name="q" type="search" placeholder="Any niche, creator or @channel: football, cooking, luxury villas, @handle…" required autocomplete="off" />
+        <button type="submit">Find videos</button>
+      </form>
+      <div class="filters">
+        <div class="toggle" role="radiogroup" aria-label="Ranking">
+          <label><input type="radio" name="mode" value="breakout" checked /> Breaking out now</label>
+          <label><input type="radio" name="mode" value="views" /> Most viewed</label>
+        </div>
+        <label>Period
+          <select id="period"><option value="24h">24 hours</option><option value="7d">7 days</option><option value="30d" selected>30 days</option><option value="90d">90 days</option><option value="1y">1 year</option></select>
+        </label>
+        <label>Format
+          <select id="format"><option value="any">Any</option><option value="short">Shorts (≤3 min)</option><option value="long">Long form</option></select>
+        </label>
+        <label>Licence
+          <select id="license"><option value="any">Any</option><option value="creativeCommon">Creative Commons only (reusable)</option></select>
+        </label>
+        <label>Language <input id="lang" size="4" placeholder="en" maxlength="5" /></label>
+        <label>Region <input id="region" size="4" placeholder="US" maxlength="2" /></label>
+      </div>
+      <p id="notice" class="notice" hidden></p>
+      <div id="results" class="results"></div>
+    </section>
+
+    <section id="make" class="panel" hidden>
+      <button class="link" id="back">← Back to results</button>
+      <div id="reference" class="reference"></div>
+      <div class="paths">
+        <button class="path" id="path-clip">
+          <strong>Clip this video</strong>
+          <span>For footage you own or have permission to edit and repost. Upload the files, record your rights, and get three cuts.</span>
+        </button>
+        <button class="path" id="path-original">
+          <strong>Create an original version</strong>
+          <span>For videos you don't own. Get a fresh hook, script beats and shot list based on the format that worked.</span>
+        </button>
+      </div>
+
+      <div id="clip-panel" hidden>
+        <h2>Your footage</h2>
+        <form id="upload-form" class="card">
+          <label class="file">Video file <input type="file" name="file" accept="video/*,.mp4,.mov,.webm,.mkv" required /></label>
+          <label>Why can you use it?
+            <select name="basis" id="basis"></select>
+          </label>
+          <label>Rights holder <input name="holder" required placeholder="Your name or company" /></label>
+          <label>Evidence <input name="evidence" placeholder="Licence link or permission reference (needed unless you own it)" /></label>
+          <label>Credit line <input name="attribution" placeholder="Required for Creative Commons, e.g. © 2008 Blender Foundation, CC BY 3.0" /></label>
+          <label class="check"><input type="checkbox" name="confirmed" value="true" required /> I confirm the statement above is true for this file.</label>
+          <button type="submit">Add source</button>
+          <p class="hint">Each file gets a rights record tied to its exact contents (SHA-256). Clips can't be made from files without one.</p>
+        </form>
+        <ul id="sources" class="sources"></ul>
+        <div class="card row">
+          <label>Length <select id="target"><option value="15">15s</option><option value="30" selected>30s</option><option value="45">45s</option><option value="60">60s</option></select></label>
+          <label>Shape <select id="aspect"><option value="vertical">Vertical 9:16</option><option value="landscape">Landscape 16:9</option></select></label>
+          <button id="make-cuts" disabled>Make 3 cuts</button>
+          <span id="cut-status" class="hint"></span>
+        </div>
+        <div id="cuts" class="cuts"></div>
+        <details id="rights-log" class="card" hidden><summary>Rights record</summary><pre></pre></details>
+      </div>
+
+      <div id="original-panel" hidden></div>
+    </section>
+
+    <section class="panel status">
+      <h3>What this release does</h3>
+      <table id="features"><thead><tr><th>Area</th><th>Feature</th><th>Status</th><th>Note</th></tr></thead><tbody></tbody></table>
+    </section>
+  </main>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
