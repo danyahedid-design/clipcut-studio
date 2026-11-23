@@ -22,6 +22,11 @@ export function median(values) {
  * @param {Date} now
  */
 export function computeMetrics(video, baseline, now = new Date()) {
+  if (baseline?.uploads) {
+    // Compare against the channel's other uploads, never against itself.
+    const others = baseline.uploads.filter((u) => u.id !== video.id).map((u) => u.views);
+    baseline = { medianViews: median(others), sampleSize: others.length };
+  }
   const ageHours = Math.max(1, (now - new Date(video.publishedAt)) / HOUR);
   const metrics = {
     views: { value: video.views ?? null, basis: video.views == null ? "unavailable" : "reported" },

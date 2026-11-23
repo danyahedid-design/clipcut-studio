@@ -40,9 +40,9 @@ test("YouTube provider calls the official endpoints and builds baselines", async
       search: { items: [{ id: { videoId: "v1" } }] },
       videos: url.searchParams.get("part").includes("snippet")
         ? { items: [{ id: "v1", snippet: { title: "T", channelId: "UC1", channelTitle: "Chan", publishedAt: "2026-11-23T00:00:00Z", thumbnails: {} }, statistics: { viewCount: "50000", commentCount: "10" }, contentDetails: { duration: "PT59S" } }] }
-        : { items: [{ statistics: { viewCount: "1000" } }, { statistics: { viewCount: "3000" } }] },
+        : { items: [{ id: "a", statistics: { viewCount: "1000" } }, { id: "v1", statistics: { viewCount: "50000" } }, { id: "b", statistics: { viewCount: "3000" } }] },
       channels: { items: [{ id: "UC1", contentDetails: { relatedPlaylists: { uploads: "UU1" } } }] },
-      playlistItems: { items: [{ contentDetails: { videoId: "a" } }, { contentDetails: { videoId: "v1" } }, { contentDetails: { videoId: "b" } }] },
+      playlistItems: { items: [{ contentDetails: { videoId: "a" } }, { contentDetails: { videoId: "v1" } }, { contentDetails: { videoId: "b" } }, { contentDetails: { videoId: "new", videoPublishedAt: "2026-11-23T10:00:00Z" } }] },
     }[ep];
     return { ok: true, json: async () => json };
   };
@@ -58,5 +58,5 @@ test("YouTube provider calls the official endpoints and builds baselines", async
   assert.match(search, /relevanceLanguage=en/);
   assert.match(search, /publishedAfter=/);
   assert.match(search, /videoLicense=creativeCommon/);
-  assert.ok(!calls.find((c) => c.startsWith("videos?part=statistics")).includes("v1"), "baseline excludes the result itself");
+  assert.ok(!calls.find((c) => c.startsWith("videos?part=statistics")).includes("new"), "uploads under 3 days old are left out of the baseline");
 });

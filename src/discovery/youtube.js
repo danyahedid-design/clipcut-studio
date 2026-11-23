@@ -77,7 +77,7 @@ export class YouTubeProvider {
     if (!channelIds.length) return {};
     const ch = await this.get("channels", { part: "contentDetails", id: channelIds.join(",") });
     const baselines = {};
-    const resultIds = new Set(videos.map((v) => v.id));
+    const settled = Date.now() - 3 * 86400e3; // uploads younger than 3 days are still climbing
     await Promise.all(
       (ch.items || []).map(async (c) => {
         const uploads = c.contentDetails?.relatedPlaylists?.uploads;
@@ -88,11 +88,16 @@ export class YouTubeProvider {
             playlistId: uploads,
             maxResults: BASELINE_UPLOADS,
           });
-          const ids = (pl.items || []).map((i) => i.contentDetails.videoId).filter((id) => !resultIds.has(id));
+          const ids = (pl.items || [])
+            .filter((i) => !i.contentDetails.videoPublishedAt || new Date(i.contentDetails.videoPublishedAt) < settled)
+            .map((i) => i.contentDetails.videoId);
           if (!ids.length) return;
           const st = await this.get("videos", { part: "statistics", id: ids.join(",") });
-          const views = (st.items || []).map((v) => Number(v.statistics.viewCount)).filter(Number.isFinite);
-          baselines[c.id] = { medianViews: median(views), sampleSize: views.length };
+          const list = (st.items || [])
+            .map((v) => ({ id: v.id, views: Number(v.statistics.viewCount) }))
+            .filter((u) => Number.isFinite(u.views));
+          // Each result is later compared with this list minus itself (see ranking.computeMetrics).
+          baselines[c.id] = { uploads: list, medianViews: median(list.map((u) => u.views)), sampleSize: list.length };
         } catch {
           // A missing baseline just means the outlier metric shows as unavailable.
         }
