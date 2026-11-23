@@ -46,7 +46,7 @@ Without `YOUTUBE_API_KEY` the search runs on **synthetic sample data**, and the 
 - **Breakout score**: log(views per hour) + 1.5 × log2(outlier) + capped engagement + recency bonus. Log scales stop one giant channel from crowding out a small channel that is outperforming itself.
 - **Shorts** are classified by duration (≤ 3 min). The API doesn't expose aspect ratio, so the UI says "Short (by length)".
 
-YouTube quota: about 120 units per search with the default caps (10,000 units a day by default).
+YouTube quota: about 120 to 150 units per search with the default caps (10,000 units a day by default).
 
 ## Layout
 

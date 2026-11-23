@@ -22,7 +22,7 @@ for (const q of ["football", "cooking", "luxury villas"]) {
     lines.push(`## "${q}" · ${mode === "breakout" ? "Breaking out now" : "Most viewed"}`, ``, `| # | Title | Channel | Views | Views/h | vs channel | Why |`, `|---|---|---|---|---|---|---|`);
     for (const v of r.results.slice(0, 5)) {
       const o = v.metrics.outlierScore;
-      lines.push(`| ${v.rank} | ${v.url ? `[${v.title}](${v.url})` : v.title} | ${v.channelTitle} | ${fmt(v.views)} | ${fmt(v.metrics.viewsPerHour.value)} | ${o.value ?? "n/a"}x (${o.basis}) | ${v.reasons.slice(0, 2).join("; ")} |`);
+      lines.push(`| ${v.rank} | ${v.url ? `[${v.title}](${v.url})` : v.title} | ${v.channelTitle} | ${fmt(v.views)} | ${fmt(v.metrics.viewsPerHour.value)} | ${o.value != null ? `${o.value}x` : "n/a"} (${o.basis}) | ${v.reasons.slice(0, 2).join("; ")} |`);
     }
     lines.push(``);
   }

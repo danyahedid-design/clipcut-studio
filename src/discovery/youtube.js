@@ -1,11 +1,11 @@
 // YouTube Data API v3 provider. Official API only, read-only, API key auth.
-// Quota cost per search is roughly 100 (search.list) + 2 + 2 per channel baseline,
-// so about 120 units with the default caps. The default daily quota is 10,000 units.
+// Quota cost per search is roughly 100 (search.list) + 2 + 2 per channel baseline (up to 25 channels),
+// so about 120 to 150 units with the default caps. The default daily quota is 10,000 units.
 
 import { median, parseIsoDuration } from "./ranking.js";
 
 const API = "https://www.googleapis.com/youtube/v3";
-const MAX_BASELINE_CHANNELS = 10;
+const MAX_BASELINE_CHANNELS = 25; // one channels.list call covers up to 50 ids
 const BASELINE_UPLOADS = 25;
 
 const PERIODS = { "24h": 1, "7d": 7, "30d": 30, "90d": 90, "1y": 365 };
