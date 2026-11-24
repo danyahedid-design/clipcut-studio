@@ -7,6 +7,7 @@ export const RIGHTS_BASES = {
   own: "I created this footage and own the rights",
   licensed: "I hold a licence that allows editing and reposting",
   permission: "The rights holder gave me written permission to edit and repost",
+  clipping_campaign: "I joined the creator's clipping campaign, and its terms let me clip and post this footage",
   cc_by: "Creative Commons licence that allows reuse with credit (CC BY or CC BY-SA)",
   public_domain: "Public domain or CC0, no credit required",
 };
@@ -18,8 +19,12 @@ export function validateRights(input) {
   const errors = [];
   if (!RIGHTS_BASES[input?.basis]) errors.push(`basis must be one of: ${Object.keys(RIGHTS_BASES).join(", ")}`);
   if (!input?.holder?.trim()) errors.push("holder (who owns the rights) is required");
-  if (["licensed", "permission", "cc_by", "public_domain"].includes(input?.basis) && !input?.evidence?.trim())
-    errors.push("evidence is required for this basis (licence link, permission reference, etc.)");
+  if (["licensed", "permission", "clipping_campaign", "cc_by", "public_domain"].includes(input?.basis) && !input?.evidence?.trim())
+    errors.push(
+      input?.basis === "clipping_campaign"
+        ? "evidence is required: paste the campaign link (for example its Whop or Vyro page)"
+        : "evidence is required for this basis (licence link, permission reference, etc.)",
+    );
   if (NEEDS_ATTRIBUTION.has(input?.basis) && !input?.attribution?.trim())
     errors.push("attribution is required for Creative Commons footage (the credit line the licence asks for)");
   if (input?.confirmed !== true && input?.confirmed !== "true")

@@ -2,23 +2,60 @@
 // Uses only the reference's format signals (title pattern, length, why it ranked), never its
 // footage, audio, script or thumbnail. Output is a template-based draft for the user to rewrite.
 
+// Order matters: the first matching pattern wins.
 const PATTERNS = [
+  { key: "challenge", test: /challenge|tried|win \$|\$\d|last to|survive|for \d+ (hours|days)|\b\d+ (hours|days) (in|at|on)|gone wrong/i, label: "Challenge / stakes" },
   { key: "versus", test: /\bvs\.?\b|versus|beginner|cheapest|most expensive/i, label: "Comparison (A vs B)" },
-  { key: "challenge", test: /challenge|tried|for \d+ days|24 hours|gone wrong/i, label: "Personal challenge / experiment" },
-  { key: "list", test: /^\d+|\b\d+ (tips|ways|things|mistakes|reasons)|ranking|top \d+/i, label: "Numbered list / ranking" },
-  { key: "explainer", test: /explained|why |how |what |in under|in \d+ (seconds|minutes)/i, label: "Fast explainer" },
+  { key: "heartfelt", test: /surpris|reunit|thank|old teacher|stranger|gave (my|a|him|her)|helping/i, label: "Heartfelt surprise" },
+  { key: "reveal", test: /inside|secret|nobody|truth|hidden|erased|isolat|alone|disappear|feared|abandoned|least visited|miles from|forbidden/i, label: "Explore / insider reveal" },
+  { key: "list", test: /^\d+ |\b\d+ (tips|ways|things|mistakes|reasons|places)|ranking|top \d+/i, label: "Numbered list / ranking" },
+  { key: "explainer", test: /explained|^why |^how |^what |in under|in \d+ (seconds|minutes)/i, label: "Fast explainer" },
   { key: "reaction", test: /react|reacting|watching|review/i, label: "Reaction / review" },
-  { key: "reveal", test: /inside|secret|nobody|truth|hidden/i, label: "Insider reveal" },
 ];
 
+// Hooks are structures with [placeholders] for the creator to fill with their own story.
+// They never reuse the reference's words, and never promise numbers we can't back up.
 const HOOKS = {
-  versus: (t) => [`One of these costs 10 times more. Can you tell which?`, `Beginner or pro: watch the hands, not the face.`, `I tested both so you don't have to waste money on ${t}.`],
-  challenge: (t) => [`Day one I almost quit ${t}. Day seven surprised me.`, `I gave myself one rule for ${t}, and broke it by lunch.`, `Here's what a week of ${t} actually looks like.`],
-  list: (t) => [`Number three is the one nobody does, and it matters most.`, `Most people get the first ${t} tip wrong.`, `Save this before your next ${t} attempt.`],
-  explainer: (t) => [`You've seen ${t} everywhere. Here's why, in under a minute.`, `Everyone says ${t} is simple. It isn't, and here's the part they skip.`, `The real reason ${t} works comes down to one thing.`],
-  reaction: (t) => [`I didn't expect this ${t} moment to hit this hard.`, `Pause at the 3-second mark. That's the whole story.`, `My honest take on ${t}, with no sponsor.`],
-  reveal: (t) => [`Most people never get to see this side of ${t}.`, `This is the part of ${t} that usually gets cut.`, `I asked an insider one question about ${t}.`],
-  generic: (t) => [`Here's the ${t} moment everyone is talking about, done my way.`, `If you care about ${t}, watch the first five seconds.`, `I tried the ${t} format that's working right now.`],
+  challenge: [
+    "One rule, [time limit], and no way out. Here's how it went.",
+    "Everyone told me [challenge] was impossible, so I tried it.",
+    "Hour one was easy. Hour [n] was not.",
+  ],
+  versus: [
+    "One of these costs [x] times more. Can you tell which?",
+    "[Option A] or [option B]? I tested both so you don't have to.",
+    "Same [thing], two budgets. The result surprised me.",
+  ],
+  heartfelt: [
+    "I hadn't seen [person] in [years]. They had no idea I was coming.",
+    "This started as a small thank-you and turned into something bigger.",
+    "[Person] changed my life. Today I finally told them.",
+  ],
+  reveal: [
+    "Most people will never see [place]. I went to find out why.",
+    "[Place] is [surprising fact]. Here's what it's really like.",
+    "I spent [time] in [place] so you can see it from the inside.",
+  ],
+  list: [
+    "Number [n] is the one nobody does, and it matters most.",
+    "[N] [things] I wish I'd known before [starting].",
+    "Save this before your next [activity].",
+  ],
+  explainer: [
+    "You've seen [topic] everywhere. Here's why, in under a minute.",
+    "Everyone says [topic] is simple. Here's the part they skip.",
+    "[Topic] comes down to one thing.",
+  ],
+  reaction: [
+    "I didn't expect this [topic] moment to hit this hard.",
+    "Pause at the 3-second mark. That's the whole story.",
+    "My honest take on [topic], with no sponsor.",
+  ],
+  generic: [
+    "Watch what happens when [setup].",
+    "I wasn't supposed to film this part of [topic].",
+    "Give me [n] seconds and you'll see why [topic] is everywhere.",
+  ],
 };
 
 export function detectFormat(title = "") {
@@ -30,8 +67,8 @@ export function createOriginalBrief(reference, { topic, targetSeconds } = {}) {
   const fmt = detectFormat(reference.title);
   const short = (reference.durationSeconds ?? 60) <= 180;
   const length = targetSeconds || (short ? 45 : 480);
-  const subject = (topic || reference.query || guessTopic(reference.title)).trim();
-  const hooks = (HOOKS[fmt.key] || HOOKS.generic)(subject);
+  const subject = (topic && !topic.startsWith("@") ? topic : reference.query && !reference.query.startsWith("@") ? reference.query : "[your topic]").trim();
+  const hooks = (HOOKS[fmt.key] || HOOKS.generic).map((h) => h.replace(/\[topic\]/g, subject).replace(/^\[Topic\]/, cap(subject)));
 
   const beats = short
     ? [
@@ -82,18 +119,17 @@ export function createOriginalBrief(reference, { topic, targetSeconds } = {}) {
 }
 
 function titleIdeas(key, t) {
-  const T = t.charAt(0).toUpperCase() + t.slice(1);
+  // Placeholders keep the titles honest: the creator fills in their own facts.
   const map = {
-    versus: [`Cheap vs expensive ${t}: I tested both`, `${T}: what actually matters`],
-    challenge: [`I did ${t} every day for a week`, `My ${t} experiment didn't go to plan`],
-    list: [`3 ${t} mistakes I see every day`, `The ${t} tips that actually work`],
-    explainer: [`${T}, explained simply`, `Why ${t} works (and when it doesn't)`],
-    reaction: [`My honest take on ${t}`, `${T}: the moment that changed my mind`],
-    reveal: [`The side of ${t} you don't see`, `What nobody tells you about ${t}`],
+    challenge: ["I tried [challenge] for [time]", "Last one to [action] wins [prize]"],
+    heartfelt: ["I surprised [person] after [years]", "Thanking the person who changed my life"],
+    versus: ["[Cheap] vs [expensive] [thing]: I tested both", "[Thing]: what actually matters"],
+    list: [`[N] ${t} mistakes I see every day`, `The ${t} tips that actually work`],
+    explainer: [`${cap(t)}, explained simply`, `Why ${t} works (and when it doesn't)`],
+    reaction: [`My honest take on ${t}`, `The ${t} moment that changed my mind`],
+    reveal: ["[Time] inside [place]", "The [place] most people never see"],
   };
-  return map[key] || [`${T}, my way`, `Trying the ${t} format everyone's using`];
+  return map[key] || [`${cap(t)}, my way`, `Trying the ${t} format everyone's using`];
 }
 
-function guessTopic(title) {
-  return title.replace(/[^\p{L}\p{N}\s]/gu, " ").split(/\s+/).filter((w) => w.length > 3).slice(0, 3).join(" ") || "this topic";
-}
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);

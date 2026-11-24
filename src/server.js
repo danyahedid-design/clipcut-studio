@@ -11,6 +11,9 @@ import { createOriginalBrief } from "./original.js";
 import { makeCuts } from "./clip/index.js";
 import { probe } from "./clip/ffmpeg.js";
 import { ASPECTS } from "./clip/render.js";
+import { normaliseTimeline, timelineFromCut, splitAt, timelineDuration, clipStarts, EFFECTS, TRANSITIONS } from "./edit/model.js";
+import { renderTimeline, renderCover, parseSrt, captionFont } from "./edit/render.js";
+import { suggestMeta } from "./edit/meta.js";
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
@@ -26,7 +29,8 @@ export async function createApp({ dataDir = process.env.DATA_DIR || path.join(RO
       filename: (_req, file, cb) => cb(null, `${crypto.randomUUID()}${path.extname(file.originalname).toLowerCase().slice(0, 8)}`),
     }),
     limits: { fileSize: 4 * 1024 ** 3 },
-    fileFilter: (_req, file, cb) => cb(null, /^video\//.test(file.mimetype) || /\.(mp4|mov|m4v|webm|mkv)$/i.test(file.originalname)),
+    fileFilter: (_req, file, cb) =>
+      cb(null, /^(video|audio)\//.test(file.mimetype) || /\.(mp4|mov|m4v|webm|mkv|mp3|m4a|wav|aac|ogg)$/i.test(file.originalname)),
   });
 
   const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
@@ -69,7 +73,8 @@ export async function createApp({ dataDir = process.env.DATA_DIR || path.join(RO
       upload.single("file")(req, res, (err) => (err ? next(err) : next()));
     }),
     wrap(async (req, res) => {
-      if (!req.file) return res.status(400).json({ error: "Attach a video file (mp4, mov, webm, mkv)" });
+      if (!req.file) return res.status(400).json({ error: "Attach a video (mp4, mov, webm, mkv) or, for music, an audio file (mp3, m4a, wav)" });
+      const kind = req.body.kind === "music" ? "music" : "video";
       const errors = validateRights(req.body);
       if (errors.length) {
         await fs.rm(req.file.path, { force: true });
@@ -78,7 +83,8 @@ export async function createApp({ dataDir = process.env.DATA_DIR || path.join(RO
       let info;
       try {
         info = await probe(req.file.path);
-        if (!info.hasVideo) throw new Error("no video stream");
+        if (kind === "video" && !info.hasVideo) throw new Error("no video stream");
+        if (kind === "music" && !info.hasAudio) throw new Error("no audio stream");
       } catch (e) {
         await fs.rm(req.file.path, { force: true });
         return res.status(422).json({ error: `Not a readable video: ${e.message}` });
@@ -95,8 +101,10 @@ export async function createApp({ dataDir = process.env.DATA_DIR || path.join(RO
         width: info.width,
         height: info.height,
         hasAudio: info.hasAudio,
+        hasVideo: info.hasVideo,
+        kind,
       });
-      project.rights.push(buildRightsRecord({ sourceId, fileName: req.file.originalname, sha256, input: req.body }));
+      project.rights.push(buildRightsRecord({ sourceId, fileName: req.file.originalname, sha256, kind, input: req.body }));
       await store.save(project);
       res.status(201).json(project);
     }),
@@ -107,7 +115,7 @@ export async function createApp({ dataDir = process.env.DATA_DIR || path.join(RO
     wrap(async (req, res) => {
       req.setTimeout(30 * 60e3);
       const project = await store.get(req.params.id);
-      const ids = req.body.sourceIds?.length ? req.body.sourceIds : project.sources.map((s) => s.id);
+      const ids = req.body.sourceIds?.length ? req.body.sourceIds : project.sources.filter((s) => s.kind !== "music").map((s) => s.id);
       if (!ids.length) return res.status(400).json({ error: "Add at least one source video first" });
       assertSourcesCleared(project, ids);
       const dir = store.projectDir(project.id);
@@ -131,11 +139,140 @@ export async function createApp({ dataDir = process.env.DATA_DIR || path.join(RO
     }),
   );
 
+  // ---------- Editor ----------
+  const sourceMap = (project) =>
+    Object.fromEntries(project.sources.map((s) => [s.id, { file: path.join(store.projectDir(project.id), "sources", s.storedAs), hasAudio: s.hasAudio }]));
+  const editorView = (project, timeline) => ({
+    timeline,
+    duration: timelineDuration(timeline),
+    starts: clipStarts(timeline),
+    credits: creditsFor(project, usedSources(timeline)),
+  });
+  const usedSources = (tl) => [...new Set([...tl.clips.map((c) => c.sourceId), ...tl.broll.map((b) => b.sourceId), ...(tl.music ? [tl.music.sourceId] : [])])];
+
+  app.get("/api/editor/options", (_req, res) => res.json({ effects: EFFECTS, transitions: TRANSITIONS, captionFont: !!captionFont() }));
+
+  app.get(
+    "/api/projects/:id/timeline",
+    wrap(async (req, res) => {
+      const project = await store.get(req.params.id);
+      if (!project.timeline) return res.status(404).json({ error: "No timeline yet. Open one of the cuts in the editor first." });
+      res.json(editorView(project, project.timeline));
+    }),
+  );
+
+  app.post(
+    "/api/projects/:id/timeline/from-cut",
+    wrap(async (req, res) => {
+      const project = await store.get(req.params.id);
+      const cut = project.cuts.find((c) => c.file === req.body.file) || project.cuts.at(-1);
+      if (!cut) return res.status(400).json({ error: "Make cuts first" });
+      project.timeline = timelineFromCut(cut, project);
+      const meta = suggestMeta({ project, timeline: project.timeline, credits: creditsFor(project, usedSources(project.timeline)) });
+      project.timeline.meta = { ...project.timeline.meta, title: meta.titles[0], description: meta.description, coverText: meta.coverText };
+      await store.save(project);
+      res.status(201).json(editorView(project, project.timeline));
+    }),
+  );
+
+  app.put(
+    "/api/projects/:id/timeline",
+    wrap(async (req, res) => {
+      const project = await store.get(req.params.id);
+      project.timeline = normaliseTimeline(req.body, project);
+      await store.save(project);
+      res.json(editorView(project, project.timeline));
+    }),
+  );
+
+  app.post(
+    "/api/projects/:id/timeline/split",
+    wrap(async (req, res) => {
+      const project = await store.get(req.params.id);
+      if (!project.timeline) return res.status(400).json({ error: "No timeline" });
+      project.timeline = normaliseTimeline(splitAt(project.timeline, Number(req.body.at) || 0), project);
+      await store.save(project);
+      res.json(editorView(project, project.timeline));
+    }),
+  );
+
+  app.post(
+    "/api/projects/:id/captions/srt",
+    express.text({ type: "*/*", limit: "1mb" }),
+    wrap(async (req, res) => {
+      const captions = parseSrt(req.body);
+      if (!captions.length) return res.status(400).json({ error: "No captions found in that SRT text" });
+      res.json({ captions });
+    }),
+  );
+
+  app.post(
+    "/api/projects/:id/meta/suggest",
+    wrap(async (req, res) => {
+      const project = await store.get(req.params.id);
+      const tl = project.timeline ? normaliseTimeline(req.body.timeline || project.timeline, project) : null;
+      if (!tl) return res.status(400).json({ error: "No timeline" });
+      res.json(suggestMeta({ project, timeline: tl, credits: creditsFor(project, usedSources(tl)), topic: req.body.topic }));
+    }),
+  );
+
+  app.post(
+    "/api/projects/:id/render",
+    wrap(async (req, res) => {
+      req.setTimeout(30 * 60e3);
+      const project = await store.get(req.params.id);
+      if (!project.timeline) return res.status(400).json({ error: "No timeline" });
+      const tl = project.timeline;
+      const preview = req.body.preview === true;
+      const dir = store.projectDir(project.id);
+      const stamp = Date.now();
+      const base = `edit-${preview ? "preview" : "final"}-${tl.aspect}-${stamp}`;
+      const out = path.join(dir, "renders", `${base}.mp4`);
+      const scale = (preview ? 0.4 : 1) * renderScale;
+      const info = await renderTimeline(tl, sourceMap(project), out, { scale, preview, workDir: path.join(dir, "work", base) });
+      const credits = creditsFor(project, usedSources(tl));
+      const result = {
+        file: `${base}.mp4`,
+        preview,
+        aspect: tl.aspect,
+        media: { duration: Math.round(info.duration * 100) / 100, width: info.width, height: info.height, videoCodec: info.videoCodec, audioCodec: info.audioCodec },
+        createdAt: new Date().toISOString(),
+      };
+      if (!preview) {
+        await renderCover(sourceMap(project), tl, path.join(dir, "renders", `${base}.jpg`), { scale: renderScale });
+        if (tl.captions.length) await fs.writeFile(path.join(dir, "renders", `${base}.srt`), info.srt);
+        Object.assign(result, {
+          cover: `${base}.jpg`,
+          srt: tl.captions.length ? `${base}.srt` : null,
+          title: tl.meta.title,
+          description: tl.meta.description,
+          credits,
+          timeline: tl, // the exact edit that produced this file
+        });
+        project.exports = [...(project.exports || []), result];
+        await store.save(project);
+      }
+      await fs.rm(path.join(dir, "work", base), { recursive: true, force: true });
+      res.status(201).json(result);
+    }),
+  );
+
+  // Source files for scrubbing in the editor (range requests supported by sendFile).
+  app.get(
+    "/api/projects/:id/sources/:sourceId/file",
+    wrap(async (req, res) => {
+      const project = await store.get(req.params.id);
+      const s = project.sources.find((x) => x.id === req.params.sourceId);
+      if (!s) return res.sendStatus(404);
+      res.sendFile(path.join(store.projectDir(project.id), "sources", s.storedAs));
+    }),
+  );
+
   app.get(
     "/media/:id/:file",
     wrap(async (req, res) => {
       const file = path.basename(req.params.file);
-      if (!/^cut-[A-C]-\w+-\d+\.(mp4|jpg)$/.test(file)) return res.sendStatus(404);
+      if (!/^(cut-[A-C]|edit-(preview|final))-\w+-\d+\.(mp4|jpg|srt)$/.test(file)) return res.sendStatus(404);
       res.sendFile(path.join(store.projectDir(req.params.id), "renders", file), (err) => err && !res.headersSent && res.sendStatus(404));
     }),
   );
@@ -143,7 +280,7 @@ export async function createApp({ dataDir = process.env.DATA_DIR || path.join(RO
   app.use((err, _req, res, _next) => {
     const status = err.status || (err.code === "LIMIT_FILE_SIZE" ? 413 : 500);
     if (status >= 500) console.error(err);
-    res.status(status).json({ error: err.message });
+    res.status(status).json({ error: err.message, ...(err.details ? { details: err.details } : {}) });
   });
 
   return app;
@@ -159,7 +296,11 @@ export const FEATURES = [
   { area: "Make", feature: "Create an original version (hook, beats, shot list)", status: "works", note: "Template draft, not AI-written yet" },
   { area: "Make", feature: "Dead-air removal, strong moments, 3 openings, MP4 + cover", status: "works" },
   { area: "Make", feature: "Merge footage from several files", status: "works" },
-  { area: "Edit", feature: "Timeline editor, captions, music, effects", status: "planned", note: "Step 2" },
+  { area: "Edit", feature: "Timeline: trim, split, reorder, delete, speed 0.5x to 2x", status: "works" },
+  { area: "Edit", feature: "Zoom and reframe, color correction, 7 effects, 5 transitions", status: "works" },
+  { area: "Edit", feature: "B-roll overlays, music with automatic ducking, audio cleanup, loudness to -14 LUFS", status: "works" },
+  { area: "Edit", feature: "Editable captions burned in, SRT import and export", status: "works", note: "Typed or imported; automatic speech-to-text needs a transcription service" },
+  { area: "Edit", feature: "Title, description and cover with text for each version", status: "works", note: "Template suggestions, fully editable; CC credits added automatically" },
   { area: "Publish", feature: "YouTube upload and scheduling", status: "planned", note: "Step 3, needs Google OAuth" },
   { area: "Learn", feature: "Analytics and 8M views goal", status: "planned", note: "Step 3" },
   { area: "Find", feature: "Clipping campaigns (creators who pay or allow clippers)", status: "planned", note: "Needs an authorized campaign source" },
